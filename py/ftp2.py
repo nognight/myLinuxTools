@@ -3,16 +3,16 @@
 import ftplib
 import os
 import socket
-import datetime,logging
+import datetime, logging
 
-#地址
+# 地址
 HOST = '132.38.0.157'
 DIRN = './'
 
-#目录
-PVUV_DIR='/home/ftp/daliy/pvuv/'
-APPNEW_DIR='/home/ftp/daliy/appNew/'
-USERMON_DIR='/home/ftp/daliy/usermon/'
+# 目录
+PVUV_DIR = '/home/ftp/daliy/pvuv/'
+APPNEW_DIR = '/home/ftp/daliy/appNew/'
+USERMON_DIR = '/home/ftp/daliy/usermon/'
 
 # 日志配置
 logging.basicConfig(level=logging.INFO,
@@ -24,6 +24,7 @@ logging.basicConfig(level=logging.INFO,
 # 时间
 now = datetime.datetime.now()
 time = now
+
 
 def get_date():
     global today, yesterday, day_before_yesterday, first_day, last_month_first_day, last_month_today
@@ -46,6 +47,7 @@ def get_date():
     print(last_month_today)
     return 0
 
+
 # 上月的今天，对月份日期进行特殊处理
 def get_last_month_today(today_day):
     day = today_day
@@ -58,12 +60,13 @@ def get_last_month_today(today_day):
             day = 28
     return day
 
+
 def downloadfile(ftp, remotepath, localpath):
-    bufsize = 1024                #设置缓冲块大小
-    fp = open(localpath,'wb')     #以写模式在本地打开文件
-    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize) #接收服务器上文件并写入本地文件
-    ftp.set_debuglevel(0)         #关闭调试
-    fp.close()                    #关闭文件
+    bufsize = 1024  # 设置缓冲块大小
+    fp = open(localpath, 'wb')  # 以写模式在本地打开文件
+    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize)  # 接收服务器上文件并写入本地文件
+    ftp.set_debuglevel(0)  # 关闭调试
+    fp.close()  # 关闭文件
     logging.info("***finish ftp download %s" % localpath)
 
 
@@ -79,37 +82,34 @@ def main():
     logging.info("***login date %s" % today)
     print(':login  " %s"' % HOST)
     try:
-        f.login(user='ecs030',passwd='tJ2rC4/uq')
+        f.login(user='ecs030', passwd='tJ2rC4/uq')
         logging.info("***login date %s" % today)
         print(':login  " %s"' % HOST)
     except ftplib.error_perm:
         print('ERROR:login  " %s"' % HOST)
         logging.error("***ERROR:login e %s" % (e))
-   
+
         f.quit()
         return
 
     print('cwd  " %s"' % HOST)
     try:
         f.cwd(DIRN)
-    
-        pvuvFileName='030_wap_firstpage_'+yesterday+'.txt'
-        appNewFileName='030_phone_newuser_'+yesterday+'.txt'
-        usermonFileName='030_usermon_'+yesterday+'.txt'
-       
 
-        downloadfile(f,'./'+pvuvFileName,PVUV_DIR+pvuvFileName)
-        downloadfile(f,'./'+appNewFileName,APPNEW_DIR+appNewFileName)
-        downloadfile(f,'./'+appNewFileName,USERMON_DIR+usermonFileName)
-        
+        pvuvFileName = '030_wap_firstpage_' + yesterday + '.txt'
+        appNewFileName = '030_phone_newuser_' + yesterday + '.txt'
+        usermonFileName = '030_usermon_' + yesterday + '.txt'
+
+        downloadfile(f, './' + pvuvFileName, PVUV_DIR + pvuvFileName)
+        downloadfile(f, './' + appNewFileName, APPNEW_DIR + appNewFileName)
+        downloadfile(f, './' + usermonFileName, USERMON_DIR + usermonFileName)
 
         os.system('chgrp -R ftp /home/ftp')
         os.system('chown -R ftp:ftp /home/ftp/')
 
-        logging.info("***finish ftp work")
-       
-
         f.quit()
+
+        logging.info("***finish ftp work")
 
     except ftplib.error_perm:
         print('ERROR:downloadfile  " %s"' % HOST)
