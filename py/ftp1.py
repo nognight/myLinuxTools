@@ -3,7 +3,14 @@
 import ftplib
 import os
 import socket
-import datetime, logging
+import datetime, logging, smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+# 第三方 SMTP 服务
+mail_host = "smtp.163.com"  # 设置服务器
+mail_user = "nognight"  # 用户名
+mail_pass = "fate99296"  # 口令
 
 HOST = '132.38.0.157'
 DIRN = './'
@@ -20,6 +27,8 @@ logging.basicConfig(level=logging.INFO,
 
 now = datetime.datetime.now()
 time = now
+
+REPORT = ''
 
 
 def get_date():
@@ -57,16 +66,45 @@ def get_last_month_today(today_day):
     return day
 
 
-def downloadfile(ftp, remotepath, localpath):
+def send_email(report):
+    sender = 'nognight@163.com'
+    receivers = ['nognight@163.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+
+    message = MIMEText('ftp1每日报告邮件\n ' + report, 'plain', 'utf-8')
+    message['From'] = Header('nognight@163.com', 'utf-8')
+    message['To'] = Header('nognight@163.com', 'utf-8')
+
+    subject = 'ftp1每日报告邮件'
+    message['Subject'] = Header(subject, 'utf-8')
+
+    try:
+        smtpObj = smtplib.SMTP()
+        smtpObj.connect(mail_host, 25)  # 25 为 SMTP 端口号
+        smtpObj.login(mail_user, mail_pass)
+        smtpObj.sendmail(sender, receivers, message.as_string())
+        logging.info("邮件发送成功")
+    except smtplib.SMTPException as e:
+        logging.error("Error: 无法发送邮件")
+        logging.exception(e)
+
+def download_file(ftp, remotepath, localpath):
     bufsize = 1024  # 设置缓冲块大小
-    fp = open(localpath, 'wb')  # 以写模式在本地打开文件
-    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize)  # 接收服务器上文件并写入本地文件
-    ftp.set_debuglevel(0)  # 关闭调试
-    fp.close()  # 关闭文件
-    logging.info("***finish ftp download %s" % localpath)
+    global REPORT
+    try:
+        fp = open(localpath, 'wb')  # 以写模式在本地打开文件
+        ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize)  # 接收服务器上文件并写入本地文件
+        ftp.set_debuglevel(0)  # 关闭调试
+        fp.close()  # 关闭文件
+        logging.info("***finish ftp download %s" % localpath)
+        REPORT = REPORT + '\n ***finish ftp download ' + localpath
+    except Exception as e:
+        logging.error("download_file Exception")
+        logging.exception(e)
+        REPORT = REPORT + '\n download_file Exception ' + localpath
 
 
 def main():
+    global REPORT
     try:
         f = ftplib.FTP(HOST)
     except (socket.error, socket.gaierror):
@@ -92,8 +130,8 @@ def main():
         iphone_fileName = '030_iphone_' + yesterday + '.txt'
         android_fileName = '030_android_' + yesterday + '.txt'
 
-        downloadfile(f, './' + iphone_fileName, IPHONE_DIR + iphone_fileName)
-        downloadfile(f, './' + android_fileName, ANDROID_DIR + android_fileName)
+        download_file(f, './' + iphone_fileName, IPHONE_DIR + iphone_fileName)
+        download_file(f, './' + android_fileName, ANDROID_DIR + android_fileName)
 
         os.system('chgrp -R ftp /home/ftp')
         os.system('chown -R ftp:ftp /home/ftp/')
@@ -101,10 +139,12 @@ def main():
         f.quit()
 
         logging.info("***finish ftp work")
+        REPORT = REPORT + '\n ***finish ftp work '
 
     except ftplib.error_perm:
         print('ERROR:downloadfile  " %s"' % HOST)
         logging.error("***ERROR:downloadfile e %s" % (e))
+        REPORT = REPORT + '\n ***ERROR:downloadfile e '
         f.quit()
         return
     return
@@ -113,3 +153,4 @@ def main():
 if __name__ == '__main__':
     get_date()
     main()
+    send_email(REPORT)
